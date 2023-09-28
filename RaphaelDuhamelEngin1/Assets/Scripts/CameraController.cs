@@ -9,10 +9,6 @@ public class CameraController : MonoBehaviour
     [SerializeField]
     private Vector2 m_clampingXRotationValues = Vector2.zero;
 
-    private void Awake()
-    {
-    }
-
     // Update is called once per frame
     void Update()
     {
@@ -51,7 +47,20 @@ public class CameraController : MonoBehaviour
 
     private void UpdateCameraScroll()
     {
-        if (Input.mouseScrollDelta.y != 0)
+        float scrollDelta = Input.mouseScrollDelta.y;
+        if (scrollDelta != 0)
+        {
+            m_scrollValue -= scrollDelta;
+            m_scrollValue = Mathf.Clamp(m_scrollValue, m_camMinDistance, m_camMaxDistance);
+
+            m_targetPosition = transform.position + transform.forward * scrollDelta;
+
+            float proposedDistance = Vector3.Distance(m_targetPosition, m_objectToLookAt.position);
+            if (proposedDistance < m_camMinDistance)
+            {
+                m_targetPosition = transform.position + (m_targetPosition - transform.position).normalized * (m_camMinDistance - Vector3.Distance(transform.position, m_objectToLookAt.position));
+            }
+            else if (proposedDistance > m_camMaxDistance)
         {
             //TODO: Faire une vérification selon la distance la plus proche ou la plus éloignée
             //Que je souhaite entre ma caméra et mon objet
@@ -61,24 +70,24 @@ public class CameraController : MonoBehaviour
         }
     }
 
-    private void FUpdateTestCameraInFrontOfObstructions()
+
+    private void MoveCameraInFrontOfObstructionsFUpdate()
     {
-        // Bit shift the index of the layer (8) to get a bit mask
         int layerMask = 1 << 8;
 
         RaycastHit hit;
-        // Does the ray intersect any objects excluding the player layer
+
         var vecteurDiff = transform.position - m_objectToLookAt.position;
         var distance = vecteurDiff.magnitude;
         if (Physics.Raycast(m_objectToLookAt.position, vecteurDiff, out hit, distance, layerMask))
         {
-            // Un objet entre focus et camera
+            //J'ai un objet entre mon focus et ma camÃ©ra
             Debug.DrawRay(m_objectToLookAt.position, vecteurDiff.normalized * hit.distance, Color.yellow);
             transform.SetPositionAndRotation(hit.point, transform.rotation);
         }
         else
         {
-            // Pas d'objet
+            //Je n'en ai pas
             Debug.DrawRay(m_objectToLookAt.position, vecteurDiff, Color.white);
         }
     }
