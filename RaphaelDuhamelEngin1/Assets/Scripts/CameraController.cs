@@ -1,3 +1,5 @@
+using System;
+using TMPro;
 using UnityEngine;
 
 public class CameraController : MonoBehaviour
@@ -8,6 +10,11 @@ public class CameraController : MonoBehaviour
     private float m_rotationSpeed = 1.0f;
     [SerializeField]
     private Vector2 m_clampingXRotationValues = Vector2.zero;
+    private Vector3 m_targetPosition;
+    private float m_desiredPosition;
+    public float m_lerpSpeed;
+    public float m_camMinDistance;
+    public float m_camMaxDistance;
 
     // Update is called once per frame
     void Update()
@@ -17,9 +24,9 @@ public class CameraController : MonoBehaviour
         UpdateCameraScroll();
     }
 
-    void FixedUpdate()
+    private void FixedUpdate()
     {
-        FUpdateTestCameraInFrontOfObstructions();
+        MoveCameraInFrontOfObstructionsFUpdate();
     }
 
     private void UpdateHorizontalMovements()
@@ -47,13 +54,10 @@ public class CameraController : MonoBehaviour
 
     private void UpdateCameraScroll()
     {
-        float scrollDelta = Input.mouseScrollDelta.y;
-        if (scrollDelta != 0)
+        if (Input.mouseScrollDelta.y != 0)
         {
-            m_scrollValue -= scrollDelta;
-            m_scrollValue = Mathf.Clamp(m_scrollValue, m_camMinDistance, m_camMaxDistance);
-
-            m_targetPosition = transform.position + transform.forward * scrollDelta;
+            m_desiredPosition += Input.mouseScrollDelta.y;
+            m_targetPosition = transform.position + transform.forward * Input.mouseScrollDelta.y;
 
             float proposedDistance = Vector3.Distance(m_targetPosition, m_objectToLookAt.position);
             if (proposedDistance < m_camMinDistance)
@@ -61,27 +65,28 @@ public class CameraController : MonoBehaviour
                 m_targetPosition = transform.position + (m_targetPosition - transform.position).normalized * (m_camMinDistance - Vector3.Distance(transform.position, m_objectToLookAt.position));
             }
             else if (proposedDistance > m_camMaxDistance)
-        {
-            //TODO: Faire une vérification selon la distance la plus proche ou la plus éloignée
-            //Que je souhaite entre ma caméra et mon objet
-
-            //TODO: Lerp plutôt que d'effectuer immédiatement la translation
-            transform.Translate(Vector3.forward * Input.mouseScrollDelta.y, Space.Self);
+            {
+                m_targetPosition = transform.position + (m_targetPosition - transform.position).normalized * (m_camMaxDistance - Vector3.Distance(transform.position, m_objectToLookAt.position));
+            }
+            transform.position = Vector3.Lerp(transform.position, m_targetPosition, m_lerpSpeed * Time.deltaTime);
         }
     }
 
 
+
     private void MoveCameraInFrontOfObstructionsFUpdate()
     {
+        // Bit shift the index of the layer (8) to get a bit mask
         int layerMask = 1 << 8;
 
         RaycastHit hit;
 
         var vecteurDiff = transform.position - m_objectToLookAt.position;
         var distance = vecteurDiff.magnitude;
+
         if (Physics.Raycast(m_objectToLookAt.position, vecteurDiff, out hit, distance, layerMask))
         {
-            //J'ai un objet entre mon focus et ma camÃ©ra
+            //J'ai un objet entre mon focus et ma caméra
             Debug.DrawRay(m_objectToLookAt.position, vecteurDiff.normalized * hit.distance, Color.yellow);
             transform.SetPositionAndRotation(hit.point, transform.rotation);
         }
@@ -89,6 +94,8 @@ public class CameraController : MonoBehaviour
         {
             //Je n'en ai pas
             Debug.DrawRay(m_objectToLookAt.position, vecteurDiff, Color.white);
+            m_targetPosition = m_objectToLookAt.position + (vecteurDiff.normalized * m_desiredPosition);
+            transform.SetPositionAndRotation(m_targetPosition, transform.rotation);
         }
     }
 
