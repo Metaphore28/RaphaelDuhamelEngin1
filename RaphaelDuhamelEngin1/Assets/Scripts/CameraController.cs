@@ -16,6 +16,11 @@ public class CameraController : MonoBehaviour
     public float m_camMinDistance;
     public float m_camMaxDistance;
 
+    void Start()
+    {
+        m_desiredPosition = Vector3.Distance(transform.position, m_objectToLookAt.position);
+    }
+
     // Update is called once per frame
     void Update()
     {
@@ -56,7 +61,7 @@ public class CameraController : MonoBehaviour
     {
         if (Input.mouseScrollDelta.y != 0)
         {
-            m_desiredPosition += Input.mouseScrollDelta.y;
+            m_desiredPosition = Mathf.Clamp(m_desiredPosition - Input.mouseScrollDelta.y, m_camMinDistance, m_camMaxDistance);
             m_targetPosition = transform.position + transform.forward * Input.mouseScrollDelta.y;
 
             float proposedDistance = Vector3.Distance(m_targetPosition, m_objectToLookAt.position);
@@ -71,8 +76,6 @@ public class CameraController : MonoBehaviour
             transform.position = Vector3.Lerp(transform.position, m_targetPosition, m_lerpSpeed * Time.deltaTime);
         }
     }
-
-
 
     private void MoveCameraInFrontOfObstructionsFUpdate()
     {
@@ -95,7 +98,7 @@ public class CameraController : MonoBehaviour
             //Je n'en ai pas
             Debug.DrawRay(m_objectToLookAt.position, vecteurDiff, Color.white);
             m_targetPosition = m_objectToLookAt.position + (vecteurDiff.normalized * m_desiredPosition);
-            transform.SetPositionAndRotation(m_targetPosition, transform.rotation);
+            transform.position = Vector3.Lerp(transform.position, m_targetPosition, m_lerpSpeed * Time.fixedDeltaTime);
         }
     }
 
